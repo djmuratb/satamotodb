@@ -1,0 +1,67 @@
+version: '3.3'
+services:
+    postgres:
+        image: postgres:10.12
+        container_name: satamotodb_postgres
+        networks:
+            satamotodb_network:
+                ipv4_address: 172.18.0.10
+                aliases:
+                    - satamotodb_postgres
+        environment:
+            POSTGRES_DB: satamoto
+            POSTGRES_PASSWORD: satamoto
+        volumes:
+            - ./001-schema.sql:/docker-entrypoint-initdb.d/001-schema.sql
+
+    satamotodb_bitcoin_node:
+        image: tka85/satamotodb-bitcoin-node:v1.0.0
+        container_name: satamotodb_bitcoin_node
+        networks:
+            satamotodb_network:
+                ipv4_address: 172.18.0.11
+                aliases:
+                    - satamotodb_bitcoin_node
+        environment:
+            DEBUG: satamoto:*
+            CONTAINER: satamotodb_bitcoin_node
+        expose:
+            - '8332'
+        volumes:
+            # REQUIRED: uncomment **only one of the following three** lines for mainnet, testnet, regtest respectively
+            # - ./bitcoin-node-mainnet.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
+            # - ./bitcoin-node-testnet.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
+            # - ./bitcoin-node-regtest.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
+
+            # OPTIONAL: uncomment and edit accordingly **only one of the following two** lines for mounting locally synced blockchain data (if you have it) for mainnet and testnet respectively. If not, bitcoind will sync chain from scratch
+            # - ~/.bitcoin/:/opt/bitcoin/.bitcoin/
+            # - ~/.bitcoin/testnet3/:/opt/bitcoin/.bitcoin/testnet3
+
+            - ./bitcoin-node-bitcoind-start.sh:/opt/bitcoin/.bitcoin/bitcoind-start.sh
+        command: /opt/bitcoin/.bitcoin/bitcoind-start.sh
+
+    satamotodb_bitcoin_sync:
+        image: tka85/satamotodb-bitcoin-sync:v1.0.0
+        container_name: satamotodb_bitcoin_sync
+        networks:
+            satamotodb_network:
+                ipv4_address: 172.18.0.12
+                aliases:
+                    - satamotodb_bitcoin_sync
+        environment:
+            DEBUG: satamoto:*
+            CONTAINER: satamotodb_bitcoin_sync
+        volumes:
+            - ./bitcoin-sync-dbConfig.json:/opt/app/dist/src/dbConfig.json
+            - ./bitcoin-sync-dbConfig.json:/opt/app/src/dbConfig.json
+            - ./bitcoin-sync-rpcConfig.json:/opt/app/dist/src/rpcConfig.json
+            - ./bitcoin-sync-rpcConfig.json:/opt/app/src/rpcConfig.json
+            - ./bitcoin-sync-start-sync.sh:/opt/app/sync.sh
+        command: /opt/app/sync.sh
+
+networks:
+    satamotodb_network:
+        ipam:
+            driver: default
+            config:
+                - subnet: "172.18.0.0/24"

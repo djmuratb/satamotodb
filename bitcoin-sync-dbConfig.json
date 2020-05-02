@@ -1,0 +1,7 @@
+{
+    "user": "postgres",
+    "host": "satamotodb_postgres",
+    "db": "satamoto",
+    "pass": "satamoto",
+    "port": 5432
+}

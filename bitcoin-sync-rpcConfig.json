@@ -1,0 +1,7 @@
+{
+    "host": "satamotodb_bitcoin_node",
+    "port": 8332,
+    "user": "satamoto",
+    "pass": "satamoto",
+    "timeout": 120000
+}
