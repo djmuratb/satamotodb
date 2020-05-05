@@ -41,7 +41,7 @@ services:
         command: /opt/bitcoin/.bitcoin/bitcoind-start.sh
 
     satamotodb_bitcoin_sync:
-        image: tka85/satamotodb-bitcoin-sync:v1.0.0
+        image: tka85/satamotodb-bitcoin-sync:v2.0.0
         container_name: satamotodb_bitcoin_sync
         networks:
             satamotodb_network:
@@ -52,10 +52,9 @@ services:
             DEBUG: satamoto:*
             CONTAINER: satamotodb_bitcoin_sync
         volumes:
-            - ./bitcoin-sync-dbConfig.json:/opt/app/dist/src/dbConfig.json
-            - ./bitcoin-sync-dbConfig.json:/opt/app/src/dbConfig.json
-            - ./bitcoin-sync-rpcConfig.json:/opt/app/dist/src/rpcConfig.json
-            - ./bitcoin-sync-rpcConfig.json:/opt/app/src/rpcConfig.json
+            - ./bitcoin-sync-appConfig.json:/opt/app/dist/appConfig.json
+            - ./bitcoin-sync-dbConfig.json:/opt/app/dist/dbConfig.json
+            - ./bitcoin-sync-rpcConfig.json:/opt/app/dist/rpcConfig.json
             - ./bitcoin-sync-start-sync.sh:/opt/app/sync.sh
         command: /opt/app/sync.sh
 

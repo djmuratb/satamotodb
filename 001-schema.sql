@@ -17,19 +17,18 @@ CREATE TYPE typeof_btc_script AS ENUM (
 );
 
 CREATE TABLE IF NOT EXISTS branch_btc (
-    _branch_id serial PRIMARY KEY,
+    _branch_serial serial PRIMARY KEY,
     _fork_height integer NOT NULL,
     _time bigint DEFAULT EXTRACT(EPOCH FROM NOW()),
-    _parent_branch integer
+    _parent_branch_serial integer
 );
 
--- consider using genesis block's creation time for initial default branch
 INSERT INTO branch_btc (_fork_height, _time)
-    VALUES (0, EXTRACT(EPOCH FROM NOW()));
+    VALUES (0, 1231006505);
 
 CREATE TABLE IF NOT EXISTS block_btc (
-    _block_id serial PRIMARY KEY,
-    _branch_id integer,
+    _block_serial serial PRIMARY KEY,
+    _branch_serial integer,
     blockhash text NOT NULL,
     strippedsize bigint,
     size bigint,
@@ -49,13 +48,12 @@ CREATE TABLE IF NOT EXISTS block_btc (
     seq bigint, -- coinbase tx
     coinbase text, -- coinbase tx
     _is_valid boolean DEFAULT TRUE,
-    UNIQUE (blockhash),
-    UNIQUE (blockhash, _is_valid)
+    UNIQUE (blockhash)
 );
 
 CREATE TABLE IF NOT EXISTS tx_btc (
-    _tx_id serial PRIMARY KEY,
-    blockhash text NOT NULL,
+    _tx_serial serial PRIMARY KEY,
+    _block_serial bigint NOT NULL,
     txid text NOT NULL,
     hash text, -- differs from txid for witness txs
     version integer,
@@ -66,14 +64,12 @@ CREATE TABLE IF NOT EXISTS tx_btc (
     hex text,
     _is_coinbase boolean,
     _is_valid boolean DEFAULT TRUE,
-    _fee bigint,
-    UNIQUE (blockhash, txid, _is_valid)
+    _fee bigint
 );
 
 CREATE TABLE IF NOT EXISTS output_btc (
-    _output_id serial PRIMARY KEY,
-    blockhash text NOT NULL,
-    txid text NOT NULL,
+    _output_serial serial PRIMARY KEY,
+    _tx_serial bigint NOT NULL,
     vout integer NOT NULL,
     value bigint,
     reqsigs integer,
@@ -81,58 +77,64 @@ CREATE TABLE IF NOT EXISTS output_btc (
     scripthex text,
     scripttype typeof_btc_script,
     _is_spent boolean DEFAULT FALSE,
-    _spent_by_blockhash text,
-    _spent_by_txid text,
-    _spent_by_vin integer,
-    _is_valid boolean DEFAULT TRUE,
-    UNIQUE (blockhash, txid, vout, _is_valid),
-    UNIQUE (_spent_by_blockhash, _spent_by_txid, _spent_by_vin, _is_valid)
+    _spent_by_input_serial bigint,
+    _is_valid boolean DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS output_address_btc (
-    _addr_id serial PRIMARY KEY,
-    blockhash text NOT NULL,
-    txid text NOT NULL,
-    vout integer NOT NULL,
+    _addr_serial serial PRIMARY KEY,
+    _output_serial bigint NOT NULL,
     addr text NOT NULL,
     addr_idx integer NOT NULL, -- it can be that the same address apears more than once in single addresses[] of an output
     addrtype typeof_btc_address,
-    _is_valid boolean DEFAULT TRUE,
-    UNIQUE (blockhash, txid, vout, addr, addr_idx)
+    _is_valid boolean DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS input_btc (
-    _input_id serial PRIMARY KEY,
-    blockhash text NOT NULL,
-    txid text NOT NULL,
+    _input_serial serial PRIMARY KEY,
+    _tx_serial bigint NOT NULL,
     vin integer NOT NULL,
-    out_blockhash text, -- the hash of the block that contained the tx that produced the output
-    out_txid text, -- the txid of the transaction that produced the output
-    out_vout integer, -- the n of the output in the transaction that produced it
+    _out_output_serial bigint NOT NULL, -- the serial of the output this input corresponds to
     out_value bigint,
     seq bigint,
     scriptasm text,
     scripthex text,
     txinwitness text[],
-    _is_valid boolean DEFAULT TRUE,
-    UNIQUE (blockhash, txid, vin),
-    UNIQUE (blockhash, txid, vin, _is_valid)
+    _is_valid boolean DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS wallet_btc (
-    _wallet_addr_id serial PRIMARY KEY,
+    _wallet_addr_serial serial PRIMARY KEY,
     walletaddr text NOT NULL,
     walletaddrtype typeof_btc_address,
     walletname text
 );
 
 -- To speed up things, postpone all foreign key constraints until after the db has been populated with the blockchain data
--- ALTER TABLE branch_btc ADD FOREIGN KEY (_parent_branch) REFERENCES branch_btc (_branch_id) MATCH FULL ON UPDATE RESTRICT;
--- ALTER TABLE block_btc ADD FOREIGN KEY (_branch_id) REFERENCES branch_btc (_branch_id) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
--- ALTER TABLE block_btc ADD FOREIGN KEY (previousblockhash) REFERENCES block_btc (blockhash) MATCH FULL ON UPDATE RESTRICT;
--- ALTER TABLE tx_btc ADD FOREIGN KEY (blockhash, _is_valid) REFERENCES block_btc (blockhash, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
--- ALTER TABLE output_btc ADD FOREIGN KEY (blockhash, txid, _is_valid) REFERENCES tx_btc (blockhash, txid, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
--- ALTER TABLE output_address_btc ADD FOREIGN KEY (blockhash, txid, vout, _is_valid) REFERENCES output_btc (blockhash, txid, vout, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
--- ALTER TABLE input_btc ADD FOREIGN KEY (blockhash, txid, _is_valid) REFERENCES tx_btc (blockhash, txid, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
--- ALTER TABLE input_btc ADD FOREIGN KEY (out_blockhash, out_txid, out_vout, _is_valid) REFERENCES output_btc (blockhash, txid, vout, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
--- ALTER TABLE output_btc ADD FOREIGN KEY (_spent_by_blockhash, _spent_by_txid, _spent_by_vin, _is_valid) REFERENCES input_btc (blockhash, txid, vin, _is_valid) MATCH SIMPLE ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE branch_btc
+    ADD FOREIGN KEY (_parent_branch_serial) REFERENCES branch_btc (_branch_serial) MATCH FULL ON UPDATE RESTRICT;
+
+ALTER TABLE block_btc
+    ADD FOREIGN KEY (_branch_serial) REFERENCES branch_btc (_branch_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE block_btc
+    ADD FOREIGN KEY (previousblockhash) REFERENCES block_btc (blockhash) MATCH FULL ON UPDATE RESTRICT;
+
+ALTER TABLE tx_btc
+    ADD FOREIGN KEY (_block_serial) REFERENCES block_btc (_block_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE output_btc
+    ADD FOREIGN KEY (_tx_serial) REFERENCES tx_btc (_tx_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE output_address_btc
+    ADD FOREIGN KEY (_output_serial) REFERENCES output_btc (_output_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE input_btc
+    ADD FOREIGN KEY (_tx_serial) REFERENCES tx_btc (_tx_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE input_btc
+    ADD FOREIGN KEY (_out_output_serial) REFERENCES output_btc (_output_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE output_btc
+    ADD FOREIGN KEY (_spent_by_input_serial) REFERENCES input_btc (_input_serial) MATCH SIMPLE ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+
