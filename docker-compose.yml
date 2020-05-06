@@ -1,6 +1,6 @@
 version: '3.3'
 services:
-    postgres:
+    satamotodb_postgres:
         image: postgres:10.12
         container_name: satamotodb_postgres
         networks:
@@ -10,6 +10,7 @@ services:
                     - satamotodb_postgres
         environment:
             POSTGRES_DB: satamoto
+            POSTGRES_USER: satamoto
             POSTGRES_PASSWORD: satamoto
         volumes:
             - ./001-schema.sql:/docker-entrypoint-initdb.d/001-schema.sql

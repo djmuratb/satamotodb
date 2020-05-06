@@ -1,5 +1,5 @@
 {
-    "user": "postgres",
+    "user": "satamoto",
     "host": "satamotodb_postgres",
     "db": "satamoto",
     "pass": "satamoto",

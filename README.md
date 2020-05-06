@@ -72,12 +72,29 @@ Attach to the container `satamotodb_postgres` and connect using `psql`:
 
 ```bash
 docker exec -it satamotodb_postgres /bin/bash
-psql -U postgres -d satamoto
+psql -U satamoto -d satamoto
 ```
 
-## Optional wallet table
+### Optional wallet table
 
 The database table `wallet` is for populating it with your own wallet's addresses so you can do queries like:
 
 * evaluate your balance
 * get the set of your unspents
+
+## Change default passwords
+
+You can secure bitcoind and Postgres beyond the default passwords that come in `bitcoin-sync-rpcConfig.json` and `bitcoin-sync-dbConfig.json` respectively.
+
+NOTE: new passwords need to be set **before first run**.
+
+### Setting bitcoind password
+
+* Set new password in `bitcoin-sync-rpcConfig.json` and
+* in one of `bitcoin-node-mainnet.conf`, `bitcoin-node-testnet.conf` or `bitcoin-node-regtest.conf` depending on which network you will be using
+* and in `bitcoin-sync-start-sync.sh` change `http://satamoto:satamoto@...` to `http://satamoto:NEW_PASSWORD_HERE@...`
+
+### Setting Postgresql password
+
+* Set it in `docker-compose.yml` as value of env variable `POSTGRES_PASSWORD` of service `satamotodb_postgres`
+* and also in `bitcoin-sync-dbConfig.json`
