@@ -47,8 +47,9 @@ CREATE TABLE IF NOT EXISTS block_btc (
     previousblockhash text,
     seq bigint, -- coinbase tx
     coinbase text, -- coinbase tx
-    _is_valid boolean DEFAULT TRUE,
-    UNIQUE (blockhash)
+    _is_valid boolean NOT NULL,
+    UNIQUE (blockhash),
+    UNIQUE (_block_serial, _is_valid)
 );
 
 CREATE TABLE IF NOT EXISTS tx_btc (
@@ -63,8 +64,9 @@ CREATE TABLE IF NOT EXISTS tx_btc (
     locktime bigint,
     hex text,
     _is_coinbase boolean,
-    _is_valid boolean DEFAULT TRUE,
-    _fee bigint
+    _is_valid boolean NOT NULL,
+    _fee bigint,
+    UNIQUE (_tx_serial, _is_valid)
 );
 
 CREATE TABLE IF NOT EXISTS output_btc (
@@ -78,7 +80,8 @@ CREATE TABLE IF NOT EXISTS output_btc (
     scripttype typeof_btc_script,
     _is_spent boolean DEFAULT FALSE,
     _spent_by_input_serial bigint,
-    _is_valid boolean DEFAULT TRUE
+    _is_valid boolean NOT NULL,
+    UNIQUE (_output_serial, _is_valid)
 );
 
 CREATE TABLE IF NOT EXISTS output_address_btc (
@@ -87,7 +90,7 @@ CREATE TABLE IF NOT EXISTS output_address_btc (
     addr text NOT NULL,
     addr_idx integer NOT NULL, -- it can be that the same address apears more than once in single addresses[] of an output
     addrtype typeof_btc_address,
-    _is_valid boolean DEFAULT TRUE
+    _is_valid boolean NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS input_btc (
@@ -100,7 +103,7 @@ CREATE TABLE IF NOT EXISTS input_btc (
     scriptasm text,
     scripthex text,
     txinwitness text[],
-    _is_valid boolean DEFAULT TRUE
+    _is_valid boolean NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS wallet_btc (
@@ -112,11 +115,11 @@ CREATE TABLE IF NOT EXISTS wallet_btc (
 
 -- To speed up things, postpone all foreign key constraints until after the db has been populated with the blockchain data
 -- ALTER TABLE branch_btc ADD FOREIGN KEY (_parent_branch_serial) REFERENCES branch_btc (_branch_serial) MATCH FULL ON UPDATE RESTRICT;
--- ALTER TABLE block_btc ADD FOREIGN KEY (_branch_serial) REFERENCES branch_btc (_branch_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE block_btc ADD FOREIGN KEY (_branch_serial) REFERENCES branch_btc (_branch_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 -- ALTER TABLE block_btc ADD FOREIGN KEY (previousblockhash) REFERENCES block_btc (blockhash) MATCH FULL ON UPDATE RESTRICT;
--- ALTER TABLE tx_btc ADD FOREIGN KEY (_block_serial) REFERENCES block_btc (_block_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
--- ALTER TABLE output_btc ADD FOREIGN KEY (_tx_serial) REFERENCES tx_btc (_tx_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
--- ALTER TABLE output_address_btc ADD FOREIGN KEY (_output_serial) REFERENCES output_btc (_output_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
--- ALTER TABLE input_btc ADD FOREIGN KEY (_tx_serial) REFERENCES tx_btc (_tx_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE tx_btc ADD FOREIGN KEY (_block_serial, _is_valid) REFERENCES block_btc (_block_serial, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE output_btc ADD FOREIGN KEY (_tx_serial, _is_valid) REFERENCES tx_btc (_tx_serial, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE output_address_btc ADD FOREIGN KEY (_output_serial, _is_valid) REFERENCES output_btc (_output_serial, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE input_btc ADD FOREIGN KEY (_tx_serial, _is_valid) REFERENCES tx_btc (_tx_serial, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
 -- ALTER TABLE input_btc ADD FOREIGN KEY (_out_output_serial) REFERENCES output_btc (_output_serial) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
 -- ALTER TABLE output_btc ADD FOREIGN KEY (_spent_by_input_serial) REFERENCES input_btc (_input_serial) MATCH SIMPLE ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
